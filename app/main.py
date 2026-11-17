@@ -1,12 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from starlette.responses import Response
 import redis
 import os
 import socket
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+import time
 
 app = FastAPI(
     title="Kubernetes FastAPI & Redis Microservice",
-    description="Cloud-native microservice demo showcasing Kubernetes load balancing, probes, and persistence.",
-    version="1.0.0"
+    description="Cloud-native microservice demo showcasing Kubernetes load balancing, probes, persistence, and Prometheus observability.",
+    version="1.1.0"
 )
 
 # Configuration from Kubernetes ConfigMap & Secret
@@ -17,6 +20,42 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # Initialize Redis client
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+
+# Prometheus Metrics Definitions
+HTTP_REQUESTS_TOTAL = Counter(
+    "http_requests_total",
+    "Total number of HTTP requests processed",
+    ["method", "endpoint", "status_code"]
+)
+HTTP_REQUEST_DURATION_SECONDS = Histogram(
+    "http_request_duration_seconds",
+    "Duration of HTTP requests in seconds",
+    ["method", "endpoint"]
+)
+
+@app.middleware("http")
+async def prometheus_metrics_middleware(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    
+    endpoint = request.url.path
+    # Group item paths together to prevent high metric cardinality
+    if endpoint.startswith("/items/"):
+        endpoint = "/items/{key}"
+
+    HTTP_REQUESTS_TOTAL.labels(
+        method=request.method,
+        endpoint=endpoint,
+        status_code=response.status_code
+    ).inc()
+    
+    HTTP_REQUEST_DURATION_SECONDS.labels(
+        method=request.method,
+        endpoint=endpoint
+    ).observe(duration)
+    
+    return response
 
 @app.get("/")
 def read_root():
@@ -44,6 +83,11 @@ def health_check():
         return {"status": "healthy", "redis": "connected"}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Redis unavailable: {str(e)}")
+
+@app.get("/metrics")
+def metrics():
+    """Prometheus metrics scraping endpoint."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.post("/items/{key}")
 def set_item(key: str, value: str):

@@ -4,6 +4,8 @@
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=flat&logo=kubernetes&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat&logo=redis&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 
 A production-grade cloud-native demonstration application running on **Kubernetes**, designed to illustrate real-world DevOps practices: **multi-replica deployments, internal service discovery, persistent storage, health probes, rolling updates, and self-healing infrastructure**.
@@ -45,6 +47,7 @@ graph TD
 | **Zero-Downtime Rollouts** | Configured `RollingUpdate` strategy (`maxSurge: 1`, `maxUnavailable: 0`). |
 | **Configuration Decoupling** | App settings injected via `ConfigMap` and sensitive keys via `Secret`. |
 | **Auto-Scaling (HPA)** | `HorizontalPodAutoscaler` scales backend pods from 2 to 5 based on CPU load. |
+| **Observability (Prometheus & Grafana)** | Prometheus automatically scrapes `/metrics` from pods; Grafana visualizes real-time metrics. |
 | **Automated CI** | GitHub Actions pipeline lints code, validates Kubernetes YAML, and builds the container. |
 
 ---
@@ -65,7 +68,8 @@ k8s-fastapi-redis/
 │   ├── secrets.yaml             # Application secrets
 │   ├── redis.yaml               # Redis PVC, Deployment, and Service
 │   ├── backend.yaml             # FastAPI Deployment (2 replicas) & NodePort Service
-│   └── hpa.yaml                 # Horizontal Pod Autoscaler definition
+│   ├── hpa.yaml                 # Horizontal Pod Autoscaler definition
+│   └── monitoring.yaml          # Prometheus & Grafana full observability stack
 ├── .gitignore
 └── README.md
 ```
